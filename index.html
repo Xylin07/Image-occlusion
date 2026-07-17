@@ -498,34 +498,13 @@
    4. In the left sidebar go to Build -> Firestore Database -> Create database
       (start in "test mode" is fine for a personal deck).
    ========================================================================= */
-const firebaseConfig = {
-  apiKey: "// Import the functions you need from the SDKs you need
-import { initializeApp } from "firebase/app";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
-
-// Your web app's Firebase configuration
-const firebaseConfig = {
-  apiKey: "AIzaSyCxbPuLYVXV2aaxlxo3hovZcCcuZvoWVXg",
-  authDomain: "image-occlusion-86fb9.firebaseapp.com",
-  projectId: "image-occlusion-86fb9",
-  storageBucket: "image-occlusion-86fb9.firebasestorage.app",
-  messagingSenderId: "10398541789",
-  appId: "1:10398541789:web:16480a8ef12ae6ed33b834"
-};
-
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);",
-  authDomain: "PASTE_YOUR_PROJECT.firebaseapp.com",
-  projectId: "PASTE_YOUR_PROJECT_ID",
-  storageBucket: "PASTE_YOUR_PROJECT.appspot.com",
-  messagingSenderId: "PASTE_YOUR_SENDER_ID",
-  appId: "PASTE_YOUR_APP_ID"
-};
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
-// Everything lives in one document. Fine for a single personal deck.
-const deckDocRef = db.collection("flashcards").doc("shared-deck");
+const firebaseConfig = { apiKey: "AIzaSyCxbPuLYVXV2aaxlxo3hovZcCcuZvoWVXg", 
+                        authDomain: "image-occlusion-86fb9.firebaseapp.com",
+                        projectId: "image-occlusion-86fb9", 
+                        storageBucket: "image-occlusion-86fb9.firebasestorage.app", 
+                        messagingSenderId: "10398541789", 
+                        appId: "1:10398541789:web:16480a8ef12ae6ed33b834" }; 
+  firebase.initializeApp(firebaseConfig); const db = firebase.firestore(); const deckDocRef = db.collection("flashcards").doc("shared-deck");
 
 /* =========================================================================
    HARDCODED CARD LIST (option b)
