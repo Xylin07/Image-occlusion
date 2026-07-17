@@ -1,0 +1,971 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Image Occlusion Flashcards</title>
+<style>
+  :root{
+    --bg: #14171a;
+    --surface: #1c2126;
+    --ink: #e9e7e2;
+    --ink-soft: #93a0ab;
+    --line: #2d333a;
+    --accent: #4fae8f;
+    --accent-soft: #1c2f29;
+    --warn: #e2825f;
+    --warn-soft: #362420;
+    --radius: 10px;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  *{ box-sizing: border-box; }
+  html,body{
+    margin:0; padding:0; height:100%;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--sans);
+  }
+  .app{
+    display:flex;
+    flex-direction:column;
+    min-height:100vh;
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 14px;
+    gap: 10px;
+  }
+
+  /* ---------- header ---------- */
+  header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    flex-wrap: wrap;
+  }
+  .brand{
+    display:flex;
+    align-items:baseline;
+    gap:8px;
+  }
+  .brand .mark{
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    border-radius: 4px;
+    padding: 2px 6px;
+    text-transform: uppercase;
+  }
+  .brand h1{
+    font-size: 15px;
+    font-weight: 600;
+    margin: 0;
+    color: var(--ink);
+  }
+  .counter{
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--ink-soft);
+    white-space: nowrap;
+  }
+
+  /* ---------- deck bar ---------- */
+  .deck-bar{
+    display:flex;
+    align-items:center;
+    gap: 8px;
+  }
+  .deck-select{
+    flex: 1 1 auto;
+    min-width: 0;
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 600;
+    border-radius: 8px;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    color: var(--ink);
+    padding: 8px 10px;
+    cursor: pointer;
+  }
+  .deck-select:focus-visible{
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+  .deck-bar button{
+    flex: 0 0 auto;
+    padding: 8px 10px;
+    font-size: 13px;
+  }
+  .deck-count{
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--ink-soft);
+  }
+
+  /* ---------- stage ---------- */
+  .stage{
+    position: relative;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    overflow: hidden;
+    flex: 1;
+    min-height: 220px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+  .stage.clickable{ cursor: pointer; }
+  .stage-inner{
+    position: relative;
+    width: 100%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+  .stage img{
+    display:block;
+    max-width: 100%;
+    max-height: 62vh;
+    width: auto;
+    height: auto;
+    user-select: none;
+    -webkit-user-drag: none;
+  }
+  .slide-tag{
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    border-radius: 999px;
+    background: var(--ink);
+    color: var(--surface);
+    opacity: 0.85;
+    pointer-events: none;
+  }
+  .slide-tag.revealed{
+    background: var(--accent);
+  }
+  .hint{
+    position:absolute;
+    bottom: 10px;
+    right: 12px;
+    font-size: 11px;
+    color: var(--ink-soft);
+    background: rgba(20,23,26,0.85);
+    padding: 3px 8px;
+    border-radius: 6px;
+    pointer-events: none;
+  }
+  .empty-state{
+    text-align:center;
+    color: var(--ink-soft);
+    padding: 30px 20px;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  .empty-state strong{ color: var(--ink); }
+
+  /* ---------- controls ---------- */
+  .controls{
+    display:flex;
+    align-items:center;
+    gap: 8px;
+  }
+  button{
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 600;
+    border-radius: 8px;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    color: var(--ink);
+    padding: 9px 12px;
+    cursor: pointer;
+    transition: background 0.12s ease, border-color 0.12s ease, transform 0.05s ease;
+  }
+  button:hover{ border-color: var(--accent); }
+  button:active{ transform: scale(0.98); }
+  button:focus-visible{
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+  button:disabled{
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+  .btn-nav{ flex: 0 0 auto; }
+  .btn-reveal{
+    flex: 1 1 auto;
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+  .btn-reveal:hover{ background: #3d9b7f; }
+  .btn-reveal.is-revealed{
+    background: var(--surface);
+    color: var(--accent);
+  }
+
+  .toolbar{
+    display:flex;
+    justify-content: space-between;
+    align-items:center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--ink-soft);
+  }
+  .toolbar button{
+    font-size: 12px;
+    padding: 6px 10px;
+    font-weight: 500;
+  }
+
+  /* ---------- manage panel ---------- */
+  .manage{
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 14px;
+    display: none;
+  }
+  .manage.open{ display:block; }
+  .manage h2{
+    font-size: 13px;
+    margin: 0 0 10px 0;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--ink-soft);
+  }
+  .upload-row{
+    display:flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    margin-bottom: 12px;
+  }
+  .field{
+    display:flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1 1 160px;
+  }
+  .field label{
+    font-size: 11px;
+    color: var(--ink-soft);
+    font-weight: 600;
+  }
+  .field input[type=file]{
+    font-size: 12px;
+    padding: 6px;
+    border: 1px dashed var(--line);
+    border-radius: 6px;
+    background: var(--bg);
+  }
+  .paste-zone{
+    border: 1px dashed var(--line);
+    border-radius: 6px;
+    background: var(--bg);
+    min-height: 68px;
+    display:flex;
+    flex-direction: column;
+    align-items:center;
+    justify-content:center;
+    gap: 6px;
+    padding: 8px;
+    cursor: text;
+    text-align:center;
+    transition: border-color 0.12s ease, background 0.12s ease;
+  }
+  .paste-zone:focus{
+    outline: none;
+    border-color: var(--accent);
+    background: var(--accent-soft);
+  }
+  .paste-zone.filled{
+    border-style: solid;
+    border-color: var(--accent);
+  }
+  .paste-zone-text{
+    font-size: 11px;
+    color: var(--ink-soft);
+    line-height: 1.4;
+    pointer-events: none;
+  }
+  .browse-link{
+    color: var(--accent);
+    text-decoration: underline;
+    cursor: pointer;
+    pointer-events: auto;
+  }
+  .thumbs{
+    display:flex;
+    gap: 6px;
+    margin-top: 4px;
+  }
+  .thumbs img{
+    width: 44px;
+    height: 44px;
+    object-fit: cover;
+    border-radius: 4px;
+    border: 1px solid var(--line);
+  }
+  .add-pair-btn{
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+  .add-pair-btn:hover{ background: #3d9b7f; }
+
+  .card-list{
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 220px;
+    overflow-y: auto;
+  }
+  .card-list li{
+    display:flex;
+    align-items:center;
+    gap: 8px;
+    padding: 6px 8px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    font-size: 12px;
+  }
+  .card-list li.active{
+    border-color: var(--accent);
+    background: var(--accent-soft);
+  }
+  .card-list img{
+    width: 30px;
+    height: 30px;
+    object-fit: cover;
+    border-radius: 4px;
+  }
+  .card-list .name{
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--ink-soft);
+  }
+  .card-list .row-actions{
+    display:flex;
+    gap: 4px;
+  }
+  .card-list button{
+    padding: 4px 7px;
+    font-size: 11px;
+  }
+  .del-btn{
+    color: var(--warn);
+    border-color: var(--warn-soft);
+  }
+  .del-btn:hover{ border-color: var(--warn); }
+
+  .manage-footer{
+    display:flex;
+    justify-content: space-between;
+    align-items:center;
+    margin-top: 10px;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .manage-footer small{
+    color: var(--ink-soft);
+    font-size: 11px;
+  }
+
+  /* small embed friendliness */
+  @media (max-width: 420px){
+    .app{ padding: 8px; gap: 8px; }
+    .brand h1{ font-size: 13px; }
+    .stage img{ max-height: 48vh; }
+    button{ padding: 8px 10px; font-size: 12px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <header>
+    <div class="brand">
+      <span class="mark">IO</span>
+      <h1>Image Occlusion</h1>
+    </div>
+    <div class="counter" id="counter">0 / 0</div>
+  </header>
+
+  <div class="deck-bar">
+    <select class="deck-select" id="deckSelect" title="Switch deck"></select>
+    <button id="newDeckBtn" title="Create a new deck">+ Deck</button>
+  </div>
+
+  <div class="stage" id="stage">
+    <div class="stage-inner" id="stageInner">
+      <div class="empty-state" id="emptyState">
+        <strong>No cards yet in this deck.</strong><br>
+        Open "Manage cards" below to upload an occluded/clean image pair,
+        or edit the <code>HARDCODED_DECKS</code> object at the top of the script.
+      </div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button class="btn-nav" id="prevBtn" title="Previous (←)">&larr; Prev</button>
+    <button class="btn-reveal" id="revealBtn">Reveal answer</button>
+    <button class="btn-nav" id="nextBtn" title="Next (→)">Next &rarr;</button>
+  </div>
+
+  <div class="toolbar">
+    <span id="statusMsg"></span>
+    <button id="manageToggle">Manage cards</button>
+  </div>
+
+  <section class="manage" id="managePanel">
+    <h2>Decks</h2>
+    <div class="upload-row">
+      <div class="field">
+        <label for="deckManageSelect">Rename or delete a deck</label>
+        <select class="deck-select" id="deckManageSelect" style="width:100%"></select>
+      </div>
+      <button id="renameDeckBtn">Rename</button>
+      <button class="del-btn" id="deleteDeckBtn">Delete</button>
+    </div>
+    <div class="manage-footer" style="margin-top:-4px;margin-bottom:12px;">
+      <small>Decks defined in the <code>HARDCODED_DECKS</code> script object can't be renamed/deleted here (edit the code instead). Deleting a deck removes its uploaded cards.</small>
+    </div>
+
+    <h2>Add a card</h2>
+    <div class="upload-row">
+      <div class="field">
+        <label for="cardDeckSelect">Add to deck</label>
+        <select class="deck-select" id="cardDeckSelect" style="width:100%"></select>
+      </div>
+      <div class="field">
+        <label for="occZone">Occluded image (question)</label>
+        <div class="paste-zone" id="occZone" tabindex="0">
+          <div class="paste-zone-text">Click here, then paste (Ctrl+V)<br>or <span class="browse-link" id="occBrowse">browse a file</span></div>
+        </div>
+        <input type="file" id="occInput" accept="image/*" hidden>
+        <div class="thumbs" id="occThumb"></div>
+      </div>
+      <div class="field">
+        <label for="cleanZone">Clean image (answer)</label>
+        <div class="paste-zone" id="cleanZone" tabindex="0">
+          <div class="paste-zone-text">Click here, then paste (Ctrl+V)<br>or <span class="browse-link" id="cleanBrowse">browse a file</span></div>
+        </div>
+        <input type="file" id="cleanInput" accept="image/*" hidden>
+        <div class="thumbs" id="cleanThumb"></div>
+      </div>
+      <button class="add-pair-btn" id="addPairBtn">Add card</button>
+    </div>
+
+    <h2>Cards in this deck</h2>
+    <ul class="card-list" id="cardList"></ul>
+
+    <div class="manage-footer">
+      <small>Uploaded cards are saved in this browser (localStorage) so they survive a page refresh.</small>
+      <button class="del-btn" id="clearAllBtn">Clear uploaded cards in this deck</button>
+    </div>
+  </section>
+
+</div>
+
+<script>
+/* =========================================================================
+   HARDCODED CARD LIST (option b)
+   -------------------------------------------------------------------------
+   Add pairs of image paths/URLs here if you'd rather edit code than upload
+   through the UI. These are NOT saved to localStorage — they always come
+   from this list. "occ" = occluded/blacked-out version, "clean" = the
+   unmarked answer version. Paths are relative to wherever this HTML file
+   is opened from (or use a full https:// URL).
+
+   Example:
+   { occ: "images/enzyme-kinetics-occ.png", clean: "images/enzyme-kinetics-clean.png" }
+   Cards are grouped by deck/subject name — add as many decks as you like.
+   ========================================================================= */
+const HARDCODED_DECKS = {
+  // "Biochemistry": [
+  //   { occ: "images/enzyme-kinetics-occ.png", clean: "images/enzyme-kinetics-clean.png" },
+  // ],
+  // "Physiology": [
+  //   { occ: "images/nephron-occ.png", clean: "images/nephron-clean.png" },
+  // ],
+};
+const DEFAULT_DECK = "General";
+
+/* ---------------------------- state ---------------------------- */
+const STORAGE_KEY = "io-flashcards-uploaded-v2";       // uploaded cards, now with a "deck" field
+const DECKS_KEY = "io-flashcards-decks-v1";             // user-created empty/custom deck names
+const ACTIVE_DECK_KEY = "io-flashcards-active-deck-v1"; // last-viewed deck
+
+let uploadedCards = loadUploaded();          // [{id, deck, occ, clean, occName, cleanName}]
+let customDeckNames = loadCustomDecks();     // deck names the user created via "+ Deck"
+let activeDeck = loadActiveDeck();
+let allCards = [];                            // cards for the active deck only, rebuilt on change
+let currentIndex = 0;
+let revealed = false;
+let pendingOcc = null;   // {dataUrl, name} staged before "Add card"
+let pendingClean = null;
+
+/* ---------------------------- elements ---------------------------- */
+const stage = document.getElementById("stage");
+const stageInner = document.getElementById("stageInner");
+const emptyState = document.getElementById("emptyState");
+const counterEl = document.getElementById("counter");
+const prevBtn = document.getElementById("prevBtn");
+const nextBtn = document.getElementById("nextBtn");
+const revealBtn = document.getElementById("revealBtn");
+const statusMsg = document.getElementById("statusMsg");
+
+const deckSelect = document.getElementById("deckSelect");
+const newDeckBtn = document.getElementById("newDeckBtn");
+const deckManageSelect = document.getElementById("deckManageSelect");
+const renameDeckBtn = document.getElementById("renameDeckBtn");
+const deleteDeckBtn = document.getElementById("deleteDeckBtn");
+const cardDeckSelect = document.getElementById("cardDeckSelect");
+
+const manageToggle = document.getElementById("manageToggle");
+const managePanel = document.getElementById("managePanel");
+const occInput = document.getElementById("occInput");
+const cleanInput = document.getElementById("cleanInput");
+const occThumb = document.getElementById("occThumb");
+const cleanThumb = document.getElementById("cleanThumb");
+const occZone = document.getElementById("occZone");
+const cleanZone = document.getElementById("cleanZone");
+const occBrowse = document.getElementById("occBrowse");
+const cleanBrowse = document.getElementById("cleanBrowse");
+const addPairBtn = document.getElementById("addPairBtn");
+const cardList = document.getElementById("cardList");
+const clearAllBtn = document.getElementById("clearAllBtn");
+
+/* ---------------------------- storage helpers ---------------------------- */
+function loadUploaded(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    // migrate any pre-deck cards (v1) to the default deck
+    return parsed.map(c => ({ deck: DEFAULT_DECK, ...c }));
+  }catch(e){
+    return [];
+  }
+}
+function saveUploaded(){
+  try{
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(uploadedCards));
+    return true;
+  }catch(e){
+    setStatus("Couldn't save to this browser's storage (likely full). Card was added for this session only.", true);
+    return false;
+  }
+}
+function loadCustomDecks(){
+  try{
+    const raw = localStorage.getItem(DECKS_KEY);
+    return raw ? JSON.parse(raw) : [];
+  }catch(e){
+    return [];
+  }
+}
+function saveCustomDecks(){
+  try{ localStorage.setItem(DECKS_KEY, JSON.stringify(customDeckNames)); }catch(e){}
+}
+function loadActiveDeck(){
+  try{ return localStorage.getItem(ACTIVE_DECK_KEY) || null; }catch(e){ return null; }
+}
+function saveActiveDeck(){
+  try{ localStorage.setItem(ACTIVE_DECK_KEY, activeDeck); }catch(e){}
+}
+
+/* ---------------------------- deck helpers ---------------------------- */
+function isHardcodedDeck(name){
+  return Object.prototype.hasOwnProperty.call(HARDCODED_DECKS, name);
+}
+function getAllDeckNames(){
+  const names = [];
+  const seen = new Set();
+  const add = (n) => { if (n && !seen.has(n)){ seen.add(n); names.push(n); } };
+  Object.keys(HARDCODED_DECKS).forEach(add);
+  customDeckNames.forEach(add);
+  uploadedCards.forEach(c => add(c.deck || DEFAULT_DECK));
+  if (names.length === 0) add(DEFAULT_DECK);
+  return names;
+}
+function getCardsForDeck(deckName){
+  const hc = (HARDCODED_DECKS[deckName] || []).map((c,i) => ({
+    id: "hc-" + deckName + "-" + i, deck: deckName, occ: c.occ, clean: c.clean,
+    occName: "hardcoded", cleanName: "hardcoded"
+  }));
+  const up = uploadedCards.filter(c => (c.deck || DEFAULT_DECK) === deckName);
+  return [...hc, ...up];
+}
+
+/* ---------------------------- build deck ---------------------------- */
+function rebuildDeck(){
+  const names = getAllDeckNames();
+  if (!activeDeck || !names.includes(activeDeck)) activeDeck = names[0];
+  saveActiveDeck();
+
+  renderDeckSelectors(names);
+
+  allCards = getCardsForDeck(activeDeck);
+  if (currentIndex >= allCards.length) currentIndex = Math.max(0, allCards.length - 1);
+  renderStage();
+  renderCardList();
+}
+
+function renderDeckSelectors(names){
+  const buildOptions = (select, { includeCount } = {}) => {
+    const prevValue = select.value;
+    select.innerHTML = "";
+    names.forEach(name => {
+      const opt = document.createElement("option");
+      opt.value = name;
+      const count = getCardsForDeck(name).length;
+      opt.textContent = includeCount ? `${name} (${count})` : name;
+      select.appendChild(opt);
+    });
+    return prevValue;
+  };
+  buildOptions(deckSelect);
+  deckSelect.value = activeDeck;
+
+  buildOptions(cardDeckSelect);
+  cardDeckSelect.value = activeDeck;
+
+  buildOptions(deckManageSelect, { includeCount: true });
+  deckManageSelect.value = activeDeck;
+}
+
+/* ---------------------------- stage rendering ---------------------------- */
+function renderStage(){
+  counterEl.textContent = allCards.length ? `${activeDeck} · ${currentIndex + 1} / ${allCards.length}` : `${activeDeck} · 0 / 0`;
+  prevBtn.disabled = allCards.length < 2;
+  nextBtn.disabled = allCards.length < 2;
+  revealBtn.disabled = allCards.length === 0;
+
+  if (allCards.length === 0){
+    stage.classList.remove("clickable");
+    stageInner.innerHTML = "";
+    stageInner.appendChild(emptyState);
+    revealBtn.textContent = "Reveal answer";
+    revealBtn.classList.remove("is-revealed");
+    return;
+  }
+
+  const card = allCards[currentIndex];
+  const src = revealed ? card.clean : card.occ;
+
+  stage.classList.add("clickable");
+  stageInner.innerHTML = `
+    <span class="slide-tag ${revealed ? "revealed" : ""}">${revealed ? "revealed" : "occluded"}</span>
+    <img id="cardImg" src="${src}" alt="${revealed ? "Clean answer image" : "Occluded question image"}">
+    <span class="hint">click to ${revealed ? "hide" : "reveal"}</span>
+  `;
+
+  const img = document.getElementById("cardImg");
+  img.onerror = () => {
+    setStatus(`Couldn't load image: ${src}`, true);
+  };
+
+  revealBtn.textContent = revealed ? "Hide answer" : "Reveal answer";
+  revealBtn.classList.toggle("is-revealed", revealed);
+}
+
+function toggleReveal(){
+  if (allCards.length === 0) return;
+  revealed = !revealed;
+  renderStage();
+}
+
+function goNext(){
+  if (allCards.length < 2) return;
+  currentIndex = (currentIndex + 1) % allCards.length;
+  revealed = false;
+  renderStage();
+}
+function goPrev(){
+  if (allCards.length < 2) return;
+  currentIndex = (currentIndex - 1 + allCards.length) % allCards.length;
+  revealed = false;
+  renderStage();
+}
+
+/* ---------------------------- manage panel ---------------------------- */
+function renderCardList(){
+  cardList.innerHTML = "";
+  if (allCards.length === 0){
+    cardList.innerHTML = `<li><span class="name">No cards in the deck yet.</span></li>`;
+    return;
+  }
+  allCards.forEach((card, i) => {
+    const li = document.createElement("li");
+    if (i === currentIndex) li.classList.add("active");
+    const isUploaded = card.id && card.id.toString().startsWith("up-");
+    li.innerHTML = `
+      <img src="${card.occ}" alt="">
+      <span class="name">${isUploaded ? (card.occName || "uploaded pair") : card.occ}</span>
+      <span class="row-actions"></span>
+    `;
+    const actions = li.querySelector(".row-actions");
+
+    const goBtn = document.createElement("button");
+    goBtn.textContent = "Go";
+    goBtn.addEventListener("click", () => {
+      currentIndex = i;
+      revealed = false;
+      renderStage();
+      renderCardList();
+    });
+    actions.appendChild(goBtn);
+
+    if (isUploaded){
+      const delBtn = document.createElement("button");
+      delBtn.textContent = "Delete";
+      delBtn.classList.add("del-btn");
+      delBtn.addEventListener("click", () => {
+        uploadedCards = uploadedCards.filter(c => c.id !== card.id);
+        saveUploaded();
+        rebuildDeck();
+        setStatus("Card deleted.");
+      });
+      actions.appendChild(delBtn);
+    }
+
+    cardList.appendChild(li);
+  });
+}
+
+function fileToDataUrl(file){
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(new Error("Could not read file"));
+    reader.readAsDataURL(file);
+  });
+}
+
+occInput.addEventListener("change", async () => {
+  const file = occInput.files[0];
+  if (!file) return;
+  const dataUrl = await fileToDataUrl(file);
+  pendingOcc = { dataUrl, name: file.name };
+  occThumb.innerHTML = `<img src="${dataUrl}" alt="">`;
+  occZone.classList.add("filled");
+});
+
+cleanInput.addEventListener("change", async () => {
+  const file = cleanInput.files[0];
+  if (!file) return;
+  const dataUrl = await fileToDataUrl(file);
+  pendingClean = { dataUrl, name: file.name };
+  cleanThumb.innerHTML = `<img src="${dataUrl}" alt="">`;
+  cleanZone.classList.add("filled");
+});
+
+occBrowse.addEventListener("click", (e) => { e.stopPropagation(); occInput.click(); });
+cleanBrowse.addEventListener("click", (e) => { e.stopPropagation(); cleanInput.click(); });
+
+function handlePasteEvent(e, kind){
+  const items = (e.clipboardData || window.clipboardData)?.items;
+  if (!items) return;
+  for (const item of items){
+    if (item.type.indexOf("image") !== -1){
+      e.preventDefault();
+      const blob = item.getAsFile();
+      const reader = new FileReader();
+      reader.onload = () => {
+        const dataUrl = reader.result;
+        if (kind === "occ"){
+          pendingOcc = { dataUrl, name: "pasted image" };
+          occThumb.innerHTML = `<img src="${dataUrl}" alt="">`;
+          occZone.classList.add("filled");
+        } else {
+          pendingClean = { dataUrl, name: "pasted image" };
+          cleanThumb.innerHTML = `<img src="${dataUrl}" alt="">`;
+          cleanZone.classList.add("filled");
+        }
+      };
+      reader.readAsDataURL(blob);
+      return;
+    }
+  }
+  setStatus("No image found on the clipboard.", true);
+}
+
+occZone.addEventListener("paste", (e) => handlePasteEvent(e, "occ"));
+cleanZone.addEventListener("paste", (e) => handlePasteEvent(e, "clean"));
+
+addPairBtn.addEventListener("click", () => {
+  if (!pendingOcc || !pendingClean){
+    setStatus("Pick both an occluded image and a clean image first.", true);
+    return;
+  }
+  const targetDeck = cardDeckSelect.value || activeDeck;
+  const newCard = {
+    id: "up-" + Date.now() + "-" + Math.random().toString(36).slice(2,7),
+    deck: targetDeck,
+    occ: pendingOcc.dataUrl,
+    clean: pendingClean.dataUrl,
+    occName: pendingOcc.name,
+    cleanName: pendingClean.name
+  };
+  uploadedCards.push(newCard);
+  const savedOk = saveUploaded();
+  activeDeck = targetDeck;
+  saveActiveDeck();
+  rebuildDeck();
+  currentIndex = allCards.length - 1;
+  revealed = false;
+  renderStage();
+  renderCardList();
+
+  pendingOcc = null;
+  pendingClean = null;
+  occInput.value = "";
+  cleanInput.value = "";
+  occThumb.innerHTML = "";
+  cleanThumb.innerHTML = "";
+  if (savedOk) setStatus("Card added and saved.");
+});
+
+clearAllBtn.addEventListener("click", () => {
+  const inDeck = uploadedCards.filter(c => (c.deck || DEFAULT_DECK) === activeDeck);
+  if (inDeck.length === 0){
+    setStatus("No uploaded cards to clear in this deck.");
+    return;
+  }
+  if (!confirm(`Remove all uploaded cards in "${activeDeck}"? Hardcoded cards in the script will stay.`)) return;
+  uploadedCards = uploadedCards.filter(c => (c.deck || DEFAULT_DECK) !== activeDeck);
+  saveUploaded();
+  rebuildDeck();
+  setStatus("Uploaded cards cleared for this deck.");
+});
+
+manageToggle.addEventListener("click", () => {
+  managePanel.classList.toggle("open");
+  manageToggle.textContent = managePanel.classList.contains("open") ? "Hide manage cards" : "Manage cards";
+});
+
+/* ---------------------------- deck events ---------------------------- */
+deckSelect.addEventListener("change", () => {
+  activeDeck = deckSelect.value;
+  saveActiveDeck();
+  currentIndex = 0;
+  revealed = false;
+  rebuildDeck();
+});
+
+cardDeckSelect.addEventListener("change", () => {
+  // just remembers where the next "Add card" will go; doesn't switch the view
+});
+
+newDeckBtn.addEventListener("click", () => {
+  const name = (prompt("New deck name (e.g. a subject like \"Pharmacology\"):") || "").trim();
+  if (!name) return;
+  const existing = getAllDeckNames();
+  if (existing.includes(name)){
+    activeDeck = name;
+    saveActiveDeck();
+    rebuildDeck();
+    setStatus(`Switched to existing deck "${name}".`);
+    return;
+  }
+  customDeckNames.push(name);
+  saveCustomDecks();
+  activeDeck = name;
+  saveActiveDeck();
+  currentIndex = 0;
+  revealed = false;
+  rebuildDeck();
+  setStatus(`Deck "${name}" created.`);
+});
+
+renameDeckBtn.addEventListener("click", () => {
+  const name = deckManageSelect.value;
+  if (!name) return;
+  if (isHardcodedDeck(name)){
+    setStatus("Can't rename a deck defined in HARDCODED_DECKS — edit the script instead.", true);
+    return;
+  }
+  const newName = (prompt(`Rename "${name}" to:`, name) || "").trim();
+  if (!newName || newName === name) return;
+  if (getAllDeckNames().includes(newName)){
+    setStatus(`A deck named "${newName}" already exists.`, true);
+    return;
+  }
+  customDeckNames = customDeckNames.map(n => n === name ? newName : n);
+  saveCustomDecks();
+  uploadedCards.forEach(c => { if ((c.deck || DEFAULT_DECK) === name) c.deck = newName; });
+  saveUploaded();
+  if (activeDeck === name) activeDeck = newName;
+  saveActiveDeck();
+  rebuildDeck();
+  setStatus(`Deck renamed to "${newName}".`);
+});
+
+deleteDeckBtn.addEventListener("click", () => {
+  const name = deckManageSelect.value;
+  if (!name) return;
+  if (isHardcodedDeck(name)){
+    setStatus("Can't delete a deck defined in HARDCODED_DECKS — edit the script instead.", true);
+    return;
+  }
+  const cardCount = uploadedCards.filter(c => (c.deck || DEFAULT_DECK) === name).length;
+  if (!confirm(`Delete deck "${name}"${cardCount ? ` and its ${cardCount} uploaded card(s)` : ""}?`)) return;
+  customDeckNames = customDeckNames.filter(n => n !== name);
+  saveCustomDecks();
+  uploadedCards = uploadedCards.filter(c => (c.deck || DEFAULT_DECK) !== name);
+  saveUploaded();
+  if (activeDeck === name) activeDeck = null; // rebuildDeck() will pick the first remaining deck
+  currentIndex = 0;
+  revealed = false;
+  rebuildDeck();
+  setStatus(`Deck "${name}" deleted.`);
+});
+
+/* ---------------------------- misc ---------------------------- */
+function setStatus(msg, isWarning){
+  statusMsg.textContent = msg;
+  statusMsg.style.color = isWarning ? "var(--warn)" : "var(--ink-soft)";
+  clearTimeout(setStatus._t);
+  setStatus._t = setTimeout(() => { statusMsg.textContent = ""; }, 4000);
+}
+
+/* ---------------------------- events ---------------------------- */
+stage.addEventListener("click", (e) => {
+  if (e.target.closest(".manage")) return;
+  toggleReveal();
+});
+revealBtn.addEventListener("click", toggleReveal);
+nextBtn.addEventListener("click", goNext);
+prevBtn.addEventListener("click", goPrev);
+
+document.addEventListener("keydown", (e) => {
+  if (e.target.tagName === "INPUT" || e.target.closest(".paste-zone")) return;
+  if (e.key === "ArrowRight") goNext();
+  else if (e.key === "ArrowLeft") goPrev();
+  else if (e.key === " " || e.key === "Enter"){ e.preventDefault(); toggleReveal(); }
+});
+
+/* ---------------------------- init ---------------------------- */
+rebuildDeck();
+</script>
+
+</body>
+</html>
